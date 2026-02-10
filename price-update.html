@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تحديث أسعار سلة</title>
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#07060d;--surface:#100f17;--surface2:#1a1826;--surface3:#242232;--border:#2a2740;--border2:#3a3655;--text:#ece8f4;--text2:#8b85a0;--text3:#5e5872;--accent:#a78bfa;--accent-dim:rgba(167,139,250,0.1);--green:#34d399;--green-dim:rgba(52,211,153,0.1);--red:#f87171;--red-dim:rgba(248,113,113,0.1);--amber:#fbbf24;--amber-dim:rgba(251,191,36,0.1);--blue:#60a5fa;--blue-dim:rgba(96,165,250,0.1);--radius:12px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Readex Pro',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6}
+.grain{position:fixed;inset:0;pointer-events:none;opacity:0.02;z-index:9999;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.glow{position:fixed;top:-180px;left:50%;transform:translateX(-50%);width:700px;height:450px;background:radial-gradient(ellipse,rgba(167,139,250,0.07),transparent 70%);pointer-events:none;z-index:0}
+.app{max-width:1120px;margin:0 auto;padding:44px 20px 80px;position:relative;z-index:1}
+.hdr{text-align:center;margin-bottom:48px}
+.hdr .badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:0.7rem;font-weight:500;background:var(--accent-dim);color:var(--accent);margin-bottom:14px;letter-spacing:0.5px}
+.hdr h1{font-size:1.75rem;font-weight:700;letter-spacing:-0.5px;margin-bottom:8px}
+.hdr p{color:var(--text2);font-size:0.86rem;font-weight:300}
+.note{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;font-size:0.78rem;color:var(--text2);line-height:1.9}
+.note strong{color:var(--text);font-weight:500}
+.note code{background:var(--surface3);padding:2px 6px;border-radius:4px;font-size:0.74rem;color:var(--accent)}
+.uploads{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+@media(max-width:680px){.uploads{grid-template-columns:1fr}}
+.uz{background:var(--surface);border:1.5px dashed var(--border);border-radius:var(--radius);padding:28px 20px;text-align:center;cursor:pointer;transition:all 0.25s}
+.uz:hover{border-color:var(--border2);background:var(--surface2)}
+.uz.ok{border-style:solid;border-color:var(--green)}
+.uz input{display:none}
+.uz .ico{font-size:28px;margin-bottom:10px}
+.uz h3{font-size:0.9rem;font-weight:600;margin-bottom:4px}
+.uz .sub{font-size:0.74rem;color:var(--text2);font-weight:300}
+.uz .fi{font-size:0.78rem;color:var(--green);margin-top:10px;font-weight:500}
+details.cfg{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:24px}
+details.cfg summary{font-size:0.84rem;font-weight:500;color:var(--text2);cursor:pointer;list-style:none}
+details.cfg summary::-webkit-details-marker{display:none}
+details.cfg summary::before{content:'⚙️ '}
+details.cfg[open] summary{margin-bottom:16px}
+.cfg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.ff label{display:block;font-size:0.7rem;color:var(--text3);margin-bottom:4px}
+.ff input{width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:0.8rem;outline:none}
+.ff input:focus{border-color:var(--accent)}
+.go{width:100%;padding:14px;border:none;border-radius:var(--radius);font-family:inherit;font-size:0.95rem;font-weight:600;cursor:pointer;transition:all 0.2s;background:var(--accent);color:#fff;margin-bottom:28px}
+.go:hover:not(:disabled){opacity:0.88;transform:translateY(-1px)}
+.go:disabled{opacity:0.3;cursor:not-allowed}
+.prog{height:3px;background:var(--surface2);border-radius:4px;margin-bottom:24px;overflow:hidden;display:none}
+.prog .bar{height:100%;background:var(--accent);border-radius:4px;transition:width 0.3s;width:0}
+.log-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;font-size:0.74rem;color:var(--text2);max-height:120px;overflow-y:auto;display:none;font-family:monospace;line-height:1.7}
+.stats{display:none;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:28px}
+@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}}
+.st{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center}
+.st .n{font-size:1.4rem;font-weight:700;margin-bottom:2px}
+.st .l{font-size:0.68rem;color:var(--text2);font-weight:300}
+.results{display:none}
+.rh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.rh h2{font-size:1.05rem;font-weight:600}
+.ra{display:flex;gap:8px}
+.b{padding:8px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-family:inherit;font-size:0.78rem;font-weight:500;cursor:pointer;transition:all 0.2s}
+.b:hover{border-color:var(--accent);background:var(--surface2)}
+.b.p{background:var(--accent);border-color:var(--accent);color:#fff}.b.p:hover{opacity:0.88}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tab{padding:6px 14px;border-radius:7px;font-size:0.74rem;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;transition:all 0.2s}
+.tab:hover{border-color:var(--accent);color:var(--text)}
+.tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.search{width:100%;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:0.82rem;outline:none;margin-bottom:14px}
+.search:focus{border-color:var(--accent)}
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;max-height:65vh;overflow-y:auto}
+.tw::-webkit-scrollbar{width:5px}
+.tw::-webkit-scrollbar-track{background:var(--surface)}
+.tw::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+table{width:100%;border-collapse:collapse;font-size:0.76rem}
+thead{position:sticky;top:0;z-index:2}
+th{background:var(--surface2);padding:11px 8px;font-weight:600;text-align:right;color:var(--text2);font-size:0.7rem;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 8px;border-bottom:1px solid rgba(42,39,64,0.5);white-space:nowrap}
+tr:hover td{background:rgba(167,139,250,0.02)}
+tr.opt td{color:var(--text2);font-size:0.72rem}
+.old{color:var(--text3);text-decoration:line-through}
+.nw{font-weight:600}.nw.up{color:var(--green)}.nw.dn{color:var(--red)}
+.bg{display:inline-block;padding:2px 8px;border-radius:5px;font-size:0.66rem;font-weight:600}
+.bg.up{background:var(--green-dim);color:var(--green)}
+.bg.dn{background:var(--red-dim);color:var(--red)}
+.bg.sale{background:var(--amber-dim);color:var(--amber)}
+.tb{display:inline-block;padding:2px 8px;border-radius:5px;font-size:0.66rem;font-weight:500}
+.tb.prod{background:var(--blue-dim);color:var(--blue)}
+.tb.optt{background:var(--amber-dim);color:var(--amber)}
+.empty{text-align:center;padding:48px;color:var(--text3);font-size:0.85rem}
+.pct{font-size:0.7rem;color:var(--text3);font-weight:400}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="glow"></div>
+<div class="app">
+  <div class="hdr">
+    <div class="badge">SALLA PRICE TOOL v3</div>
+    <h1>تحديث أسعار المتجر</h1>
+    <p>ارفع ملف الأسعار من سلة + ملف المورد ← كشف تغييرات الأسعار جاهز للرفع</p>
+  </div>
+  <div class="note">
+    <strong>معادلة التسعير:</strong> تكلفة المورد × <code>1.8</code> (إذا &lt; 200) أو × <code>1.6</code> (إذا ≥ 200) ثم إضافة هامش ثابت حسب الشريحة<br>
+    <strong>السعر المخفض:</strong> إذا السعر المحسوب &lt; Retail Price ← المحسوب يصبح مخفض و Retail يصبح سعر المنتج<br>
+    <strong>المنتجات بخيارات:</strong> سعر المنتج الأب = أقل سعر خيار | التكلفة والمخفض = أقل خيار أيضاً<br>
+    <strong>فلترة:</strong> التغييرات أكثر من 2% فقط
+  </div>
+  <div class="uploads">
+    <div class="uz" onclick="this.querySelector('input').click()" id="zs">
+      <input type="file" accept=".xlsx,.xls,.csv" onchange="loadStore(event)">
+      <div class="ico">🏪</div>
+      <h3>ملف أسعار المتجر (سلة)</h3>
+      <div class="sub">products-prices.xlsx</div>
+      <div class="fi" id="is"></div>
+    </div>
+    <div class="uz" onclick="this.querySelector('input').click()" id="zp">
+      <input type="file" accept=".xlsx,.xls,.csv" onchange="loadSupplier(event)">
+      <div class="ico">📦</div>
+      <h3>ملف المورد (FragranceX)</h3>
+      <div class="sub">AllFragrancesExcelList.xls</div>
+      <div class="fi" id="ip"></div>
+    </div>
+  </div>
+  <details class="cfg">
+    <summary>إعدادات متقدمة</summary>
+    <div class="cfg-grid">
+      <div class="ff"><label>مضاعف التكلفة &lt; 200</label><input type="number" id="mult1" value="0.8" step="0.1"></div>
+      <div class="ff"><label>مضاعف التكلفة ≥ 200</label><input type="number" id="mult2" value="0.6" step="0.1"></div>
+      <div class="ff"><label>هامش &lt; 10</label><input type="number" id="m1" value="10"></div>
+      <div class="ff"><label>هامش &lt; 50</label><input type="number" id="m2" value="35"></div>
+      <div class="ff"><label>هامش &lt; 100</label><input type="number" id="m3" value="60"></div>
+      <div class="ff"><label>هامش &lt; 200</label><input type="number" id="m4" value="70"></div>
+      <div class="ff"><label>هامش ≥ 200</label><input type="number" id="m5" value="80"></div>
+      <div class="ff"><label>نسبة التغيير الأدنى %</label><input type="number" id="minPct" value="2" step="0.5"></div>
+      <div class="ff"><label>بداية بيانات المورد (صف)</label><input type="number" id="supStart" value="7"></div>
+      <div class="ff"><label>عمود Item# (رقم)</label><input type="number" id="supSkuCol" value="2"></div>
+      <div class="ff"><label>عمود Cost (رقم)</label><input type="number" id="supCostCol" value="8"></div>
+      <div class="ff"><label>عمود Retail (رقم)</label><input type="number" id="supRetailCol" value="7"></div>
+    </div>
+  </details>
+  <button class="go" id="goBtn" disabled onclick="process()">⚡ معالجة ومقارنة الأسعار</button>
+  <div class="prog" id="prog"><div class="bar" id="bar"></div></div>
+  <div class="log-box" id="logBox"></div>
+  <div class="stats" id="sg">
+    <div class="st"><div class="n" id="s1" style="color:var(--accent)">0</div><div class="l">إجمالي المنتجات</div></div>
+    <div class="st"><div class="n" id="s2" style="color:var(--blue)">0</div><div class="l">تطابق مع المورد</div></div>
+    <div class="st"><div class="n" id="s3" style="color:var(--amber)">0</div><div class="l">تغيير &gt; 2%</div></div>
+    <div class="st"><div class="n" id="s4" style="color:var(--green)">0</div><div class="l">سعر ارتفع</div></div>
+    <div class="st"><div class="n" id="s5" style="color:var(--red)">0</div><div class="l">سعر انخفض</div></div>
+  </div>
+  <div class="results" id="res">
+    <div class="rh">
+      <h2>📋 كشف تغييرات الأسعار</h2>
+      <div class="ra">
+        <button class="b p" onclick="dlXlsx()">⬇️ تحميل XLSX</button>
+        <button class="b" onclick="dlCSV()">📄 CSV</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab on" onclick="flt('all',this)">الكل</button>
+      <button class="tab" onclick="flt('up',this)">⬆️ ارتفاع</button>
+      <button class="tab" onclick="flt('down',this)">⬇️ انخفاض</button>
+      <button class="tab" onclick="flt('sale',this)">🏷️ فيه تخفيض</button>
+    </div>
+    <input type="text" class="search" placeholder="🔍 بحث بالاسم أو SKU..." oninput="sch(this.value)">
+    <div class="tw">
+      <table>
+        <thead><tr>
+          <th>#</th><th>No.</th><th>النوع</th><th>اسم المنتج</th><th>SKU</th>
+          <th>سعر المنتج (قديم)</th><th>سعر المنتج (جديد)</th>
+          <th>التكلفة (قديم)</th><th>التكلفة (جديد)</th>
+          <th>المخفض (قديم)</th><th>المخفض (جديد)</th>
+          <th>التغيير</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="emp" style="display:none">لا توجد نتائج</div>
+  </div>
+</div>
+
+<script>
+let storeWB=null, supRaw=null;
+let displayRows=[], exportRows=[];
+let cf='all', cs='';
+
+function rd(f){return new Promise((ok,no)=>{const r=new FileReader();r.onload=e=>{try{ok(XLSX.read(e.target.result,{type:'array'}))}catch(err){no(err)}};r.onerror=no;r.readAsArrayBuffer(f)})}
+function log(m){const b=document.getElementById('logBox');b.style.display='block';b.innerHTML+=m+'<br>';b.scrollTop=b.scrollHeight}
+
+// Extract real SKU from cell formula or value
+function extractStoreSKUs(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const range=XLSX.utils.decode_range(ws['!ref']);
+  const map={};
+  for(let r=2;r<=range.e.r;r++){
+    const addr=XLSX.utils.encode_cell({r,c:3}); // Column D
+    const cell=ws[addr];
+    if(!cell)continue;
+    let sku='';
+    // Check formula: ="563780" → cell.f = '"563780"'
+    if(cell.f){
+      const m=cell.f.match(/^"(\d+)"$/);
+      if(m) sku=m[1];
+      // Also handle ="" (empty formula for parent products)
+      if(cell.f==='""'||cell.f==='') continue;
+    }
+    // Fallback to value
+    if(!sku&&cell.v!==undefined&&cell.v!==null&&cell.v!==0&&cell.v!==''){
+      let s=String(cell.v).trim();
+      if(s.startsWith('="')&&s.endsWith('"')) s=s.slice(2,-1);
+      if(s&&s!=='0') sku=s;
+    }
+    if(sku&&sku!=='0') map[r]=sku;
+  }
+  return map;
+}
+
+function parseStoreData(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  const skuMap=extractStoreSKUs(wb);
+  for(let i=2;i<raw.length;i++){
+    if(skuMap[i]) raw[i][3]=skuMap[i];
+    else raw[i][3]=''; // No SKU (parent with options or empty formula)
+  }
+  return raw;
+}
+
+async function loadStore(ev){
+  const f=ev.target.files[0];if(!f)return;
+  storeWB=await rd(f);
+  const ws=storeWB.Sheets[storeWB.SheetNames[0]];
+  const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  document.getElementById('zs').classList.add('ok');
+  document.getElementById('is').textContent=`✅ ${f.name} — ${(raw.length-2).toLocaleString()} صف`;
+  ck()
+}
+async function loadSupplier(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const wb=await rd(f);
+  supRaw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+  document.getElementById('zp').classList.add('ok');
+  const st=parseInt(document.getElementById('supStart').value)||7;
+  document.getElementById('ip').textContent=`✅ ${f.name} — ${(supRaw.length-st).toLocaleString()} منتج`;
+  ck()
+}
+function ck(){document.getElementById('goBtn').disabled=!(storeWB&&supRaw)}
+
+function calcPrice(cost){
+  const m1=parseFloat(document.getElementById('mult1').value)||0.8;
+  const m2=parseFloat(document.getElementById('mult2').value)||0.6;
+  const h1=parseFloat(document.getElementById('m1').value)||10;
+  const h2=parseFloat(document.getElementById('m2').value)||35;
+  const h3=parseFloat(document.getElementById('m3').value)||60;
+  const h4=parseFloat(document.getElementById('m4').value)||70;
+  const h5=parseFloat(document.getElementById('m5').value)||80;
+  const base=cost<200?cost+(cost*m1):cost+(cost*m2);
+  if(base<10)return Math.round((base+h1)*100)/100;
+  if(base<50)return Math.round((base+h2)*100)/100;
+  if(base<100)return Math.round((base+h3)*100)/100;
+  if(base<200)return Math.round((base+h4)*100)/100;
+  return Math.round((base+h5)*100)/100;
+}
+
+function r2(v){return Math.round(v*100)/100}
+
+function process(){
+  const SUP_START=parseInt(document.getElementById('supStart').value)||7;
+  const SUP_SKU=(parseInt(document.getElementById('supSkuCol').value)||2)-1;
+  const SUP_COST=(parseInt(document.getElementById('supCostCol').value)||8)-1;
+  const SUP_RETAIL=(parseInt(document.getElementById('supRetailCol').value)||7)-1;
+  const MIN_PCT=parseFloat(document.getElementById('minPct').value)||2;
+
+  const prog=document.getElementById('prog'),bar=document.getElementById('bar');
+  document.getElementById('logBox').innerHTML='';
+  prog.style.display='block';bar.style.width='5%';
+
+  // 1) Supplier map
+  const supMap=new Map();
+  for(let i=SUP_START;i<supRaw.length;i++){
+    const row=supRaw[i];
+    let sku=String(row[SUP_SKU]||'').replace(/[^\d]/g,'');
+    if(!sku)continue;
+    let cost=parseFloat(row[SUP_COST])||0;
+    let retail=parseFloat(row[SUP_RETAIL])||0;
+    if(cost===0&&typeof row[SUP_COST]==='string') cost=parseFloat(row[SUP_COST].replace(/[^0-9.]/g,''))||0;
+    if(retail===0&&typeof row[SUP_RETAIL]==='string'&&row[SUP_RETAIL]!=='') retail=parseFloat(row[SUP_RETAIL].replace(/[^0-9.]/g,''))||0;
+    if(cost>0) supMap.set(sku,{cost,retail});
+  }
+  log(`✅ المورد: ${supMap.size} منتج`);
+  bar.style.width='20%';
+
+  // 2) Parse store
+  const storeData=parseStoreData(storeWB);
+  let skuCount=0;
+  for(let i=2;i<storeData.length;i++){if(String(storeData[i][3]).trim())skuCount++}
+  log(`✅ المتجر: ${skuCount} SKU`);
+
+  // Build products
+  const products=[];
+  let curProd=null;
+  for(let i=2;i<storeData.length;i++){
+    const row=storeData[i];
+    const rType=String(row[1]||'').trim();
+    const no=row[0]||'';
+    const name=row[2]||'';
+    const sku=String(row[3]||'').replace(/[^\d]/g,'');
+    const price=parseFloat(row[4])||0;
+    const cost=parseFloat(row[5])||0;
+    const sale=(row[6]!=null&&row[6]!==''&&row[6]!==0)?parseFloat(row[6]):null;
+    const dateStart=row[7]||'';
+    const dateEnd=row[8]||'';
+    if(rType==='منتج'){
+      curProd={no,type:rType,name,sku,price,cost,sale,dateStart,dateEnd,options:[]};
+      products.push(curProd);
+    }else if(rType==='خيار'&&curProd){
+      curProd.options.push({no,type:rType,name,sku,price,cost,sale,dateStart,dateEnd});
+    }
+  }
+  bar.style.width='40%';
+
+  // Count matches
+  let matchCount=0;
+  for(const p of products){
+    if(p.sku&&supMap.has(p.sku))matchCount++;
+    for(const o of p.options){if(o.sku&&supMap.has(o.sku))matchCount++}
+  }
+  log(`✅ تطابق: ${matchCount} SKU`);
+
+  // 3) Process
+  displayRows=[];exportRows=[];
+  let totalProds=products.length,matched=0,changed=0,priceUp=0,priceDown=0;
+
+  // Calculate new pricing for a single item with SKU
+  function calcItem(sku){
+    if(!sku)return null;
+    const sup=supMap.get(sku);
+    if(!sup)return null;
+    const newCost=r2(sup.cost);
+    const calculated=calcPrice(sup.cost);
+    let newPrice,newSale=null;
+    if(sup.retail>0&&calculated<sup.retail){
+      newPrice=r2(sup.retail);
+      newSale=calculated;
+    }else{
+      newPrice=calculated;
+    }
+    return{newPrice,newCost,newSale};
+  }
+
+  function effectivePrice(price,sale){return sale!=null?sale:price}
+  function pctDiff(oldP,newP){return oldP>0?Math.round((newP-oldP)/oldP*1000)/10:0}
+
+  for(const prod of products){
+    if(prod.options.length===0){
+      // Simple product (no options)
+      const calc=calcItem(prod.sku);
+      if(!calc)continue;
+      matched++;
+      const eOld=effectivePrice(prod.price,prod.sale);
+      const eNew=effectivePrice(calc.newPrice,calc.newSale);
+      if(eOld>0&&Math.abs((eNew-eOld)/eOld)*100<=MIN_PCT)continue;
+      changed++;
+      const dir=eNew>eOld?'up':'down';
+      if(dir==='up')priceUp++;else priceDown++;
+
+      displayRows.push({
+        no:prod.no,type:'منتج',name:prod.name,sku:prod.sku,
+        oldPrice:prod.price,newPrice:calc.newPrice,oldCost:prod.cost,newCost:calc.newCost,
+        oldSale:prod.sale,newSale:calc.newSale,
+        dir,pct:pctDiff(eOld,eNew),hasSale:calc.newSale!=null,isOpt:false
+      });
+      exportRows.push([prod.no,'منتج',prod.name,prod.sku,
+        calc.newPrice,calc.newCost,calc.newSale!=null?calc.newSale:'',
+        prod.dateStart||'1970-01-01',prod.dateEnd||'2050-12-31']);
+    }else{
+      // Product with options
+      // Calculate each option first
+      const optResults=[];
+      let anyChanged=false;
+
+      for(const opt of prod.options){
+        const calc=calcItem(opt.sku);
+        optResults.push({opt,calc});
+        if(calc){
+          matched++;
+          const eOld=effectivePrice(opt.price,opt.sale);
+          const eNew=effectivePrice(calc.newPrice,calc.newSale);
+          if(eOld===0||Math.abs((eNew-eOld)/eOld)*100>MIN_PCT) anyChanged=true;
+        }
+      }
+
+      if(!anyChanged)continue;
+      changed++;
+
+      // Determine parent price = min effective price among options
+      let minOptPrice=Infinity, minOptCost=0, minOptSale=null, minOptRawPrice=Infinity;
+      for(const{opt,calc}of optResults){
+        let ep, rawPrice, rawCost, rawSale;
+        if(calc){
+          ep=effectivePrice(calc.newPrice,calc.newSale);
+          rawPrice=calc.newPrice;rawCost=calc.newCost;rawSale=calc.newSale;
+        }else{
+          ep=effectivePrice(opt.price,opt.sale);
+          rawPrice=opt.price;rawCost=opt.cost;rawSale=opt.sale;
+        }
+        if(ep<minOptPrice){
+          minOptPrice=ep;minOptCost=rawCost;minOptSale=rawSale;minOptRawPrice=rawPrice;
+        }
+      }
+
+      const parentNewPrice=minOptRawPrice;
+      const parentNewCost=minOptCost;
+      const parentNewSale=minOptSale;
+
+      const eOldParent=effectivePrice(prod.price,prod.sale);
+      const eNewParent=effectivePrice(parentNewPrice,parentNewSale);
+      const parentDir=eNewParent>=eOldParent?'up':'down';
+      if(parentDir==='up')priceUp++;else priceDown++;
+
+      // Parent row (no SKU)
+      displayRows.push({
+        no:prod.no,type:'منتج',name:prod.name,sku:'',
+        oldPrice:prod.price,newPrice:parentNewPrice,
+        oldCost:prod.cost,newCost:parentNewCost,
+        oldSale:prod.sale,newSale:parentNewSale,
+        dir:parentDir,pct:pctDiff(eOldParent,eNewParent),hasSale:parentNewSale!=null,isOpt:false
+      });
+      exportRows.push([prod.no,'منتج',prod.name,'',
+        parentNewPrice,parentNewCost,parentNewSale!=null?parentNewSale:'',
+        prod.dateStart||'1970-01-01',prod.dateEnd||'2050-12-31']);
+
+      // All option rows
+      for(const{opt,calc}of optResults){
+        if(calc){
+          const eOld=effectivePrice(opt.price,opt.sale);
+          const eNew=effectivePrice(calc.newPrice,calc.newSale);
+          const oDir=eNew>eOld?'up':(eNew<eOld?'down':'same');
+          displayRows.push({
+            no:opt.no,type:'خيار',name:opt.name,sku:opt.sku,
+            oldPrice:opt.price,newPrice:calc.newPrice,oldCost:opt.cost,newCost:calc.newCost,
+            oldSale:opt.sale,newSale:calc.newSale,
+            dir:oDir,pct:pctDiff(eOld,eNew),hasSale:calc.newSale!=null,isOpt:true
+          });
+          exportRows.push([opt.no,'خيار',opt.name,opt.sku,
+            calc.newPrice,calc.newCost,calc.newSale!=null?calc.newSale:'',
+            opt.dateStart||'',opt.dateEnd||'']);
+        }else{
+          // Option not in supplier — keep as is
+          displayRows.push({
+            no:opt.no,type:'خيار',name:opt.name,sku:opt.sku,
+            oldPrice:opt.price,newPrice:opt.price,oldCost:opt.cost,newCost:opt.cost,
+            oldSale:opt.sale,newSale:opt.sale,
+            dir:'same',pct:0,hasSale:opt.sale!=null,isOpt:true
+          });
+          exportRows.push([opt.no,'خيار',opt.name,opt.sku,
+            opt.price,opt.cost,opt.sale!=null?opt.sale:'',
+            opt.dateStart||'',opt.dateEnd||'']);
+        }
+      }
+    }
+  }
+  bar.style.width='90%';
+  log(`📊 النتيجة: ${changed} منتج تغير أكثر من ${MIN_PCT}%`);
+
+  document.getElementById('s1').textContent=totalProds.toLocaleString();
+  document.getElementById('s2').textContent=matched.toLocaleString();
+  document.getElementById('s3').textContent=changed.toLocaleString();
+  document.getElementById('s4').textContent=priceUp.toLocaleString();
+  document.getElementById('s5').textContent=priceDown.toLocaleString();
+  document.getElementById('sg').style.display='grid';
+  document.getElementById('res').style.display='block';
+  bar.style.width='100%';
+  setTimeout(()=>{prog.style.display='none'},400);
+  render(displayRows);
+}
+
+function getF(){
+  let d=displayRows;
+  if(cf==='up')d=d.filter(r=>r.dir==='up');
+  if(cf==='down')d=d.filter(r=>r.dir==='down');
+  if(cf==='sale')d=d.filter(r=>r.hasSale);
+  if(cs){const q=cs.toLowerCase();d=d.filter(r=>r.name.toLowerCase().includes(q)||String(r.sku).includes(q))}
+  return d;
+}
+function render(data){
+  const tb=document.getElementById('tbody'),em=document.getElementById('emp');
+  if(!data.length){tb.innerHTML='';em.style.display='block';return}
+  em.style.display='none';tb.innerHTML='';
+  const CH=400;let idx=0;
+  function go(s){
+    const e=Math.min(s+CH,data.length);let h='';
+    for(let i=s;i<e;i++){
+      const r=data[i];
+      const tr=r.isOpt?' class="opt"':'';
+      const px=r.isOpt?'↳ ':'';
+      const tc=r.type==='منتج'?'prod':'optt';
+      const dc=r.dir==='up'?'up':(r.dir==='down'?'dn':'');
+      const dl=r.dir==='up'?'⬆️ ارتفاع':(r.dir==='down'?'⬇️ انخفاض':'—');
+      const fmt=v=>v!=null&&v!==''?Number(v).toFixed(2):'—';
+      const pctStr=r.pct!==0?` <span class="pct">(${r.pct>0?'+':''}${r.pct}%)</span>`:'';
+      h+=`<tr${tr}>
+        <td>${++idx}</td><td>${r.no}</td>
+        <td><span class="tb ${tc}">${r.type}</span></td>
+        <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis" title="${r.name}">${px}${r.name}</td>
+        <td>${r.sku||''}</td>
+        <td class="old">${fmt(r.oldPrice)}</td><td class="nw ${dc}">${fmt(r.newPrice)}</td>
+        <td class="old">${fmt(r.oldCost)}</td><td class="nw">${fmt(r.newCost)}</td>
+        <td class="old">${r.oldSale!=null?fmt(r.oldSale):'—'}</td>
+        <td>${r.newSale!=null?'<span class="bg sale">'+fmt(r.newSale)+'</span>':'—'}</td>
+        <td>${dc?`<span class="bg ${dc}">${dl}</span>`:'—'}${pctStr}</td>
+      </tr>`;
+    }
+    tb.insertAdjacentHTML('beforeend',h);
+    if(e<data.length)requestAnimationFrame(()=>go(e));
+  }
+  go(0);
+}
+function flt(f,btn){cf=f;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));btn.classList.add('on');render(getF())}
+function sch(v){cs=v;render(getF())}
+
+function dlXlsx(){
+  const h1=['بيانات المنتج','','','','الأسعار','','','',''];
+  const h2=['No.','النوع','أسم المنتج','رمز المنتج sku','سعر المنتج','سعر التكلفة','السعر المخفض','تاريخ بداية التخفيض','تاريخ نهاية التخفيض'];
+  const wsData=[h1,h2,...exportRows];
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+
+  // SKU column (D) — write as plain numbers, empty string for no-SKU
+  for(let r=2;r<wsData.length;r++){
+    const addr=XLSX.utils.encode_cell({r,c:3});
+    const val=wsData[r][3];
+    if(val&&String(val).trim()){
+      // Write as number
+      ws[addr]={t:'n',v:parseInt(val)};
+    }else{
+      // Empty cell
+      ws[addr]={t:'s',v:''};
+    }
+  }
+
+  ws['!cols']=[{wch:14},{wch:8},{wch:60},{wch:14},{wch:12},{wch:12},{wch:12},{wch:18},{wch:18}];
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:3}}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Salla Product Prices Sheet');
+  XLSX.writeFile(wb,`salla_price_update_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function dlCSV(){
+  let c='\uFEFF'+'No.,النوع,أسم المنتج,رمز المنتج sku,سعر المنتج,سعر التكلفة,السعر المخفض,تاريخ بداية التخفيض,تاريخ نهاية التخفيض\n';
+  exportRows.forEach(r=>{
+    const sku=r[3]?r[3]:'';
+    c+=`${r[0]},${r[1]},"${String(r[2]).replace(/"/g,'""')}",${sku},${r[4]},${r[5]},${r[6]},${r[7]},${r[8]}\n`;
+  });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([c],{type:'text/csv;charset=utf-8'}));
+  a.download=`salla_price_update_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+</script>
+</body>
+</html>
